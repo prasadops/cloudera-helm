@@ -1,0 +1,12 @@
+---
+# Source: spinnaker/templates/rbac/halyard-sa.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: test-spinnaker-halyard
+  namespace: default
+  labels:
+    app: "test-spinnaker"
+    heritage: "Helm"
+    release: "test"
+    chart: "spinnaker-2.2.15"

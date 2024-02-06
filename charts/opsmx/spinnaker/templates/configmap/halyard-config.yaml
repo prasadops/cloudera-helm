@@ -1,0 +1,85 @@
+---
+# Source: spinnaker/templates/configmap/halyard-config.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-spinnaker-halyard-config
+  labels:
+    app: "test-spinnaker"
+    heritage: "Helm"
+    release: "test"
+    chart: "spinnaker-2.2.15"
+data:
+  install.sh: |
+    #!/bin/bash
+
+    # Wait for the Hal daemon to be ready
+    export DAEMON_ENDPOINT='curl http://test-spinnaker-halyard:8064/health'
+    export HAL_COMMAND="$DAEMON_ENDPOINT"
+    until $HAL_COMMAND ; do sleep 10 ; done
+
+    export DAEMON_ENDPOINT=http://test-spinnaker-halyard:8064
+    export HAL_COMMAND="hal --daemon-endpoint $DAEMON_ENDPOINT"
+
+    bash -xe /opt/halyard/scripts/config.sh
+
+    $HAL_COMMAND deploy apply
+  clean.sh: |
+    export HAL_COMMAND='hal --daemon-endpoint http://test-spinnaker-halyard:8064'
+    $HAL_COMMAND deploy clean -q
+  config.sh: |
+    # Spinnaker version
+    
+    $HAL_COMMAND config version edit --version 1.30.1
+    
+
+    # Storage
+    
+    echo spinnakeradmin | $HAL_COMMAND config storage s3 edit \
+        --endpoint http://test-minio:9000 \
+        --access-key-id spinnakeradmin \
+        --secret-access-key --bucket spinnaker \
+        --path-style-access true
+    $HAL_COMMAND config storage edit --type s3
+    
+    
+    
+    
+
+    # Docker Registry
+    $HAL_COMMAND config provider docker-registry enable
+
+    if $HAL_COMMAND config provider docker-registry account get dockerhub; then
+      PROVIDER_COMMAND='edit'
+    else
+      PROVIDER_COMMAND='add'
+    fi
+
+    $HAL_COMMAND config provider docker-registry account $PROVIDER_COMMAND dockerhub --address index.docker.io \
+       \
+       \
+      --repositories library/alpine,library/ubuntu,library/centos,library/nginx
+
+    $HAL_COMMAND config provider kubernetes enable
+
+    if $HAL_COMMAND config provider kubernetes account get default; then
+      PROVIDER_COMMAND='edit'
+    else
+      PROVIDER_COMMAND='add'
+    fi
+
+    $HAL_COMMAND config provider kubernetes account $PROVIDER_COMMAND default --docker-registries dockerhub \
+                --context default --service-account true \
+                 \
+                 \
+                 \
+                 \
+                --omit-namespaces=kube-system,kube-public \
+                 \
+                 \
+                 \
+                --provider-version v2
+    $HAL_COMMAND config deploy edit --account-name default --type distributed \
+                           --location default
+    # Use Deck to route to Gate
+    $HAL_COMMAND config security api edit --no-validate --override-base-url /gate

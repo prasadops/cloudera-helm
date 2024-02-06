@@ -1,0 +1,98 @@
+---
+# Source: spinnaker/templates/statefulsets/halyard.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: test-spinnaker-halyard
+  labels:
+    app: "test-spinnaker"
+    heritage: "Helm"
+    release: "test"
+    chart: "spinnaker-2.2.15"
+spec:
+  serviceName: test-spinnaker-halyard
+  replicas: 1
+  selector:
+    matchLabels:
+      app: "test-spinnaker"
+      release: "test"
+      component: halyard
+  template:
+    metadata:
+      annotations:
+        checksum/config: 319fd6160c323d4f7d127877552f7dd0b5053a60011ee2f23feea0f05fcb69c2
+      labels:
+        app: "test-spinnaker"
+        heritage: "Helm"
+        release: "test"
+        chart: "spinnaker-2.2.15"
+        component: halyard
+    spec:
+      serviceAccountName: test-spinnaker-halyard
+      securityContext:
+        runAsUser: 1000
+        fsGroup: 1000
+      initContainers:
+      - name: "create-halyard-local"
+        image: us-docker.pkg.dev/spinnaker-community/docker/halyard:1.45.0
+        command:
+        - bash
+        - /tmp/initscript/init.sh
+        volumeMounts:
+        - name: halyard-config
+          mountPath: /tmp/config
+        - name: service-settings
+          mountPath: /tmp/service-settings
+        - name: halyard-home
+          mountPath: /tmp/spinnaker
+        - name: additional-profile-config-maps
+          mountPath: /tmp/additionalProfileConfigMaps
+        - name: halyard-initscript
+          mountPath: /tmp/initscript
+        - mountPath: /volumeMount1
+          name: volumeMount1
+      volumes:
+      - name: reg-secrets
+        secret:
+          secretName: test-spinnaker-registry
+      - name: additional-profile-config-maps
+        configMap:
+          name: test-spinnaker-additional-profile-config-maps
+      - name: halyard-config
+        emptyDir: {}
+      - name: service-settings
+        configMap:
+          name: test-spinnaker-service-settings
+      - name: halyard-initscript
+        configMap:
+          name: test-spinnaker-halyard-init-script
+      - configMap:
+          name: configMap1
+        name: volume1
+      containers:
+      - name: halyard
+        image: us-docker.pkg.dev/spinnaker-community/docker/halyard:1.45.0
+        ports:
+        - containerPort: 8064
+          name: daemon
+        volumeMounts:
+        - name: halyard-home
+          mountPath: /home/spinnaker
+        - name: halyard-config
+          mountPath: /opt/halyard/config
+        - name: reg-secrets
+          mountPath: /opt/registry/passwords
+        - mountPath: /volumeMount1
+          name: volumeMount1
+  volumeClaimTemplates:
+  - metadata:
+      name: halyard-home
+      labels:
+        app: "test-spinnaker"
+        heritage: "Helm"
+        release: "test"
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 10Gi

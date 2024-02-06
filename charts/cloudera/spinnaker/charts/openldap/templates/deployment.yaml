@@ -1,0 +1,98 @@
+---
+# Source: spinnaker/charts/openldap/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    moniker.spinnaker.io/application: isd
+  name:  test-openldap
+  labels:
+    app: openldap
+    chart: openldap-1.2.3
+    release: test
+    heritage: Helm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: openldap
+      release: test
+  template:
+    metadata:
+      annotations:
+        checksum/configmap-env: 31056819e8e63624cfb1e6e02314ae4f02d21beb2f710475350fe2352af13993
+        checksum/configmap-customldif: 39677e1d48d56c421b843607c1410259905867776a7b46a7afb0064ba3c772a0
+      labels:
+        app: openldap
+        release: test
+    spec:
+      initContainers:
+      - name: openldap-init-ldif
+        image: quay.io/opsmxpublic/busybox:1.28
+        command: ['sh', '-c', 'cp /customldif/* /ldifworkingdir']
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - name: customldif
+          mountPath: /customldif
+        - name: ldifworkingdir
+          mountPath: /ldifworkingdir
+        resources:
+          {}
+      containers:
+        - name: openldap
+          image: "osixia/openldap:1.2.4"
+          lifecycle:
+            postStart:
+              exec:
+                command:
+                - /bin/sh
+                - -c
+                - until service slapd status; do sleep 10 ;done
+          imagePullPolicy: IfNotPresent
+          args: [--copy-service]
+          ports:
+            - name: ldap-port
+              containerPort: 389
+            - name: ssl-ldap-port
+              containerPort: 636
+          envFrom:
+            - configMapRef:
+                name: test-openldap-env
+            - secretRef:
+                name: test-openldap
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/ldap
+              subPath: data
+            - name: data
+              mountPath: /etc/ldap/slapd.d
+              subPath: config-data
+            - name: ldifworkingdir
+              mountPath: /container/service/slapd/assets/config/bootstrap/ldif/custom
+          env:
+          livenessProbe:
+            tcpSocket:
+              port: ldap-port
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 10
+          readinessProbe:
+            tcpSocket:
+              port: ldap-port
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 10
+          resources:
+            {}
+      volumes:
+        - name: customldif
+          configMap:
+            name: test-openldap-customldif
+        - name: ldifworkingdir
+          emptyDir: {}
+        - name: certs
+          emptyDir:
+            medium: Memory
+        - name: data
+          persistentVolumeClaim:
+            claimName: test-openldap

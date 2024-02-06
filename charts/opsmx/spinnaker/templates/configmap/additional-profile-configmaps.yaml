@@ -1,0 +1,17 @@
+---
+# Source: spinnaker/templates/configmap/additional-profile-configmaps.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-spinnaker-additional-profile-config-maps
+  labels:
+    app: "test-spinnaker"
+    heritage: "Helm"
+    release: "test"
+    chart: "spinnaker-2.2.15"
+data:
+  front50-local.yml: |-
+    spinnaker:
+      s3:
+        versioning: false
+  gate-local.yml: '{}'

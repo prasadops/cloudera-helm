@@ -1,0 +1,45 @@
+---
+# Source: spinnaker/templates/hooks/install-using-hal.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "test-install-using-hal"
+  labels:
+    app: "test-spinnaker"
+    heritage: "Helm"
+    release: "test"
+    chart: "spinnaker-2.2.15"
+  annotations:
+    "helm.sh/hook": "post-install,post-upgrade"
+    "helm.sh/hook-delete-policy": "before-hook-creation"
+    "helm.sh/hook-weight": "0"
+spec:
+  template:
+    metadata:
+      annotations:
+        checksum/config: 384c99451386676b880ec4cf8058de7237012d0b3062ec27fb4a1006c2ab8b17
+      labels:
+        app: "test-spinnaker"
+        heritage: "Helm"
+        release: "test"
+        chart: "spinnaker-2.2.15"
+    spec:
+      serviceAccountName: test-spinnaker-halyard
+      securityContext:
+        runAsUser: 1000
+        fsGroup: 1000
+      restartPolicy: OnFailure
+      volumes:
+      - name: halyard-config
+        configMap:
+          name: test-spinnaker-halyard-config
+      containers:
+      - name: halyard-install
+        image: us-docker.pkg.dev/spinnaker-community/docker/halyard:1.45.0
+        volumeMounts:
+        - name: halyard-config
+          mountPath: /opt/halyard/scripts
+        command:
+        - bash
+        - -xe
+        - "/opt/halyard/scripts/install.sh"

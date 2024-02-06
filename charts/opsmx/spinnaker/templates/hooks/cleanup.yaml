@@ -1,0 +1,40 @@
+---
+# Source: spinnaker/templates/hooks/cleanup.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "test-spinnaker-cleanup-using-hal"
+  labels:
+    app: "test-spinnaker"
+    heritage: "Helm"
+    release: "test"
+    chart: "spinnaker-2.2.15"
+    component: halyard
+  annotations:
+    "helm.sh/hook": "pre-delete"
+    "helm.sh/hook-delete-policy": "before-hook-creation"
+spec:
+  template:
+    metadata:
+      labels:
+        app: "test-spinnaker"
+        heritage: "Helm"
+        release: "test"
+        chart: "spinnaker-2.2.15"
+        component: halyard
+    spec:
+      restartPolicy: OnFailure
+      volumes:
+      - name: halyard-config
+        configMap:
+          name: test-spinnaker-halyard-config
+      containers:
+      - name: halyard-install
+        image: us-docker.pkg.dev/spinnaker-community/docker/halyard:1.45.0
+        volumeMounts:
+        - name: halyard-config
+          mountPath: /opt/halyard/scripts
+        command:
+        - bash
+        - -xe
+        - "/opt/halyard/scripts/clean.sh"

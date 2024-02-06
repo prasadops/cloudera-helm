@@ -1,0 +1,20 @@
+---
+# Source: spinnaker/templates/services/halyard.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: test-spinnaker-halyard
+  labels:
+    app: "test-spinnaker"
+    heritage: "Helm"
+    release: "test"
+    chart: "spinnaker-2.2.15"
+    component: halyard
+spec:
+  ports:
+  - port: 8064
+    name: daemon
+  clusterIP: None
+  selector:
+    app: test-spinnaker
+    component: halyard

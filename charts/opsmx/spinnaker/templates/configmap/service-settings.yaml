@@ -1,0 +1,19 @@
+---
+# Source: spinnaker/templates/configmap/service-settings.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-spinnaker-service-settings
+  labels:
+    app: "test-spinnaker"
+    heritage: "Helm"
+    release: "test"
+    chart: "spinnaker-2.2.15"
+
+data:
+  deck.yml: |-
+    env:
+      API_HOST: http://spin-gate:8084
+  redis.yml: |-
+    overrideBaseUrl: redis://:password@test-redis-master:6379
+    skipLifeCycleManagement: true
